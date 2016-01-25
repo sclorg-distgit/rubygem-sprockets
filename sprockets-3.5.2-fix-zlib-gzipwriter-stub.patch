@@ -1,0 +1,35 @@
+From 4bd518dce67f462305f9b1c36c00c04fabfbbeb2 Mon Sep 17 00:00:00 2001
+From: Dominic Cleal <dcleal@redhat.com>
+Date: Fri, 22 Jan 2016 11:40:27 +0000
+Subject: [PATCH] Fix stubbing of Zlib::GzipWriter with expected args
+
+The manifest test for raising exceptions from Zlib::GzipWriter was
+catching an ArgumentException from Ruby when the stubbing lambda
+(that accepted no arguments) was called with the normal two.  This fixes
+the test to assert the correct exception and message was raised.
+
+Observed on minitest 5.4.3 where assert_raises let the ArgumentError
+bubble up and fail the test.
+---
+ test/test_manifest.rb | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/test/test_manifest.rb b/test/test_manifest.rb
+index ab8881d..f71664a 100644
+--- a/test/test_manifest.rb
++++ b/test/test_manifest.rb
+@@ -550,8 +550,9 @@ class TestManifest < Sprockets::TestCase
+ 
+   test 'raises exception when gzip fails' do
+     manifest = Sprockets::Manifest.new(@env, @dir)
+-    Zlib::GzipWriter.stub(:new, -> { fail 'kaboom' }) do
+-      assert_raises('kaboom') { manifest.compile('application.js') }
++    Zlib::GzipWriter.stub(:new, -> (io, level) { fail 'kaboom' }) do
++      ex = assert_raises(RuntimeError) { manifest.compile('application.js') }
++      assert_equal 'kaboom', ex.message
+     end
+   end
+ end
+-- 
+2.4.3
+
